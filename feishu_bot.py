@@ -69,11 +69,19 @@ class FeishuBot:
             "content": {"text": text},
         })
 
-    def send_rich_text(self, title: str, articles: List[Dict]) -> bool:
+    def send_rich_text(self, title: str, articles: List[Dict], category: str = "digital_twin") -> bool:
         """
         发送富文本卡片 - 资讯列表
         articles: [{"title": ..., "summary": ..., "url": ..., "source": ...}]
+        category: "digital_twin" 或 "global_affairs"，决定卡片颜色
         """
+        # 卡片颜色和图标
+        card_config = {
+            "digital_twin": {"icon": "🏗️", "template": "blue"},
+            "global_affairs": {"icon": "🌍", "template": "green"},
+        }
+        config = card_config.get(category, card_config["digital_twin"])
+
         elements = []
         for art in articles:
             elements.append({
@@ -85,7 +93,6 @@ class FeishuBot:
             })
             elements.append({"tag": "hr"})
 
-        # 移除最后一个分割线
         if elements:
             elements.pop()
 
@@ -96,9 +103,9 @@ class FeishuBot:
                 "header": {
                     "title": {
                         "tag": "plain_text",
-                        "content": f"📡 {title}",
+                        "content": f"{config['icon']} {title}",
                     },
-                    "template": "blue",
+                    "template": config["template"],
                 },
                 "elements": elements,
             },

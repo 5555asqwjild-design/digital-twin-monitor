@@ -1,6 +1,6 @@
 """
-数字孪生行业资讯监控器 - AI 处理模块
-负责内容摘要生成和深度爆破解读
+资讯监控器 - AI 处理模块
+支持数字孪生 + 全球局势 两个方向的摘要生成
 """
 import os
 import re
@@ -19,13 +19,15 @@ class AIProcessor:
             base_url=AI_API_BASE,
         )
 
-    def _call(self, prompt: str, max_tokens: int = 500) -> str:
+    def _call(self, prompt: str, system_prompt: str = "", max_tokens: int = 500) -> str:
         """调用大模型"""
+        if not system_prompt:
+            system_prompt = "你是一位资讯分析专家，擅长从英文文章中提取核心信息。输出简洁、结构化、无废话。"
         try:
             resp = self.client.chat.completions.create(
                 model=AI_MODEL,
                 messages=[
-                    {"role": "system", "content": "你是一位数字孪生行业技术专家，擅长从英文技术文章中提取核心干货。输出简洁、结构化、无废话。"},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=max_tokens,
@@ -36,15 +38,28 @@ class AIProcessor:
             print(f"[ERROR] AI调用失败: {e}")
             return ""
 
-    def summarize(self, title: str, content: str) -> str:
+    def summarize(self, title: str, content: str, category: str = "digital_twin") -> str:
         """
         生成一句话精简摘要
-        输入: 文章标题 + 正文（或前几段）
-        输出: 一句话中文摘要
+        根据 category 自动切换 prompt 方向
         """
-        # 如果内容太长，截断
         content = content[:3000] if content else ""
-        prompt = f"""请对以下数字孪生行业技术文章生成一句精简的中文摘要（不超过{SUMMARY_MAX_LENGTH}字）。
+
+        if category == "global_affairs":
+            system = "你是一位地缘政治分析专家，擅长透过新闻表象看清背后的格局与博弈。你的视角是'为什么'而非'发生了什么'。"
+            prompt = f"""请对以下全球局势文章生成一句精简的中文格局解读（不超过{SUMMARY_MAX_LENGTH}字）。
+要求：
+- 不要复述新闻事实，而是点明背后的格局与博弈
+- 说明涉及的大国/阵营利益、深层动机、可能走向
+- 格式：【格局定位】+ 【背后博弈】+ 【可能走向】
+
+标题：{title}
+内容：{content}
+
+格局解读："""
+        else:
+            system = "你是一位数字孪生行业技术专家，擅长从英文技术文章中提取核心干货。输出简洁、结构化、无废话。"
+            prompt = f"""请对以下数字孪生行业技术文章生成一句精简的中文摘要（不超过{SUMMARY_MAX_LENGTH}字）。
 要求：
 - 只说核心技术点/更新内容，不要背景介绍
 - 如果涉及具体技术（如Pixel Streaming、3D Tiles、OpenUSD等），点明名称
@@ -54,20 +69,47 @@ class AIProcessor:
 内容：{content}
 
 摘要："""
-        result = self._call(prompt, max_tokens=200)
-        # 清理
+
+        result = self._call(prompt, system_prompt=system, max_tokens=200)
         result = result.replace("摘要：", "").strip()
         return result if result else f"{title[:50]}..."
 
-    def deep_dive(self, title: str, content: str, focus_area: str = "") -> str:
+    def deep_dive(self, title: str, content: str, focus_area: str = "", category: str = "digital_twin") -> str:
         """
         深度爆破解读 - 提取结构化干货
-        输入: 完整文章内容
-        输出: Markdown 格式的结构化要点
         """
-        content = content[:8000]  # 限制长度
+        content = content[:8000]
         focus_hint = f"重点关注：{focus_area}" if focus_area else ""
-        prompt = f"""你是一位数字孪生领域的技术专家。请对以下技术文章进行"爆破式"解读，提取所有硬核干货，删除一切废话。
+
+        if category == "global_affairs":
+            system = "你是一位地缘政治分析专家，擅长透过新闻表象看清背后的格局与博弈。"
+            prompt = f"""你是一位地缘政治分析专家。请对以下文章进行深度格局解读，透过表象看清背后的博弈与趋势。
+
+{focus_hint}
+
+要求输出格式（严格按此格式）：
+## 📌 格局定位
+（这件事在全球棋盘上的位置：属于大国博弈/区域冲突/经济战/技术竞争/价值观冲突中的哪一层）
+
+## 🎯 利益博弈
+- 利益方A：...（诉求、动机、手段）
+- 利益方B：...（诉求、动机、手段）
+- 潜在第三方：...
+（列出所有关键利益方及其深层动机）
+
+## 📈 趋势预判
+（基于历史规律和当前态势，预判可能的走向、关键节点、转折信号）
+
+## 🧠 历史参照
+（类似的历史事件及其走向，可供参考的经验教训）
+
+原文标题：{title}
+原文内容：
+{content}
+"""
+        else:
+            system = "你是一位数字孪生领域的技术专家。"
+            prompt = f"""你是一位数字孪生领域的技术专家。请对以下技术文章进行"爆破式"解读，提取所有硬核干货，删除一切废话。
 
 {focus_hint}
 
@@ -91,20 +133,7 @@ class AIProcessor:
 原文内容：
 {content}
 """
-        return self._call(prompt, max_tokens=2000)
-
-    def batch_summarize(self, articles: List[dict]) -> List[dict]:
-        """
-        批量生成摘要
-        articles: [{"title": ..., "content": ..., "url": ...}]
-        返回: 添加 summary 字段的文章列表
-        """
-        results = []
-        for art in articles:
-            summary = self.summarize(art["title"], art.get("content", ""))
-            art["summary"] = summary
-            results.append(art)
-        return results
+        return self._call(prompt, system_prompt=system, max_tokens=2000)
 
 
 if __name__ == "__main__":

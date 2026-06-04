@@ -74,7 +74,7 @@ def fetch_article_content(url: str) -> str:
 def run_monitor(dry_run: bool = False):
     """运行监控流程"""
     print(f"\n{'='*60}")
-    print(f"🚀 数字孪生资讯监控启动 @ {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"🚀 资讯监控启动 @ {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     print(f"{'='*60}\n")
 
     # 1. 加载历史
@@ -102,47 +102,58 @@ def run_monitor(dry_run: bool = False):
 
     print(f"[INFO] 发现 {len(new_articles)} 条新文章")
 
-    # 4. AI 生成摘要
+    # 4. AI 生成摘要（按分类分组）
     ai = AIProcessor()
-    to_push = []
+    to_push = {"digital_twin": [], "global_affairs": []}
     for art in new_articles[:MAX_ARTICLES_PER_BATCH]:
         print(f"[INFO] 正在处理: {art.title[:60]}...")
         content = fetch_article_content(art.url)
-        summary = ai.summarize(art.title, content)
+        category = getattr(art, 'category', 'digital_twin')
+        summary = ai.summarize(art.title, content, category=category)
         art.summary = summary
-        to_push.append(art)
+        to_push.setdefault(category, []).append(art)
 
-    # 5. 推送到飞书
+    # 5. 推送到飞书（按分类分别推送不同颜色的卡片）
     if not dry_run:
         bot = FeishuBot()
-        push_data = [{
-            "title": a.title,
-            "summary": a.summary,
-            "url": a.url,
-            "source": a.source,
-        } for a in to_push]
+        date_str = datetime.now().strftime('%m-%d')
 
-        if len(push_data) == 1:
-            # 单条实时推送
-            bot.send_single_article(
-                push_data[0]["title"],
-                push_data[0]["summary"],
-                push_data[0]["url"],
-                push_data[0]["source"],
-            )
-        else:
-            # 批量汇总推送
-            bot.send_rich_text(
-                f"数字孪生精选 ({datetime.now().strftime('%m-%d')})",
-                push_data,
-            )
+        for category, arts in to_push.items():
+            if not arts:
+                continue
+            push_data = [{
+                "title": a.title,
+                "summary": a.summary,
+                "url": a.url,
+                "source": a.source,
+            } for a in arts]
+
+            if category == "digital_twin":
+                title = f"🏗️ 数字孪生精选 ({date_str})"
+            else:
+                title = f"🌍 全球格局速报 ({date_str})"
+
+            if len(push_data) == 1:
+                bot.send_single_article(
+                    push_data[0]["title"],
+                    push_data[0]["summary"],
+                    push_data[0]["url"],
+                    push_data[0]["source"],
+                )
+            else:
+                bot.send_rich_text(title, push_data, category=category)
 
         # 6. 记录历史
-        for art in to_push:
-            history.add(art)
+        for arts in to_push.values():
+            for art in arts:
+                history.add(art)
 
+    total = sum(len(v) for v in to_push.values())
     print(f"\n{'='*60}")
-    print(f"✅ 完成: 推送 {len(to_push)} 条文章")
+    print(f"✅ 完成: 推送 {total} 条文章")
+    for cat, arts in to_push.items():
+        icon = "🏗️" if cat == "digital_twin" else "🌍"
+        print(f"  {icon} {cat}: {len(arts)} 条")
     print(f"{'='*60}\n")
 
 
