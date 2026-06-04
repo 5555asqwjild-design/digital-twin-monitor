@@ -72,7 +72,7 @@ DIGITAL_TWIN_SOURCES = [
 GLOBAL_AFFAIRS_SOURCES = [
     Source(
         name="The Economist",
-        url="https://www.economist.com/rss/full-rss.xml",
+        url="https://www.economist.com/rss/print-edition.xml",
         type="rss",
         priority=5,
         keywords=["geopolitics", "trade", "war", "election", "economy", "China", "US", "Russia", "Europe", "Asia", "Middle East", "Africa", "Latin America", "technology", "AI", "climate", "energy", "migration", "democracy", "authoritarianism", "sanctions", "tariff", "supply chain", "semiconductor", "nuclear", "diplomacy", "summit", "treaty", "alliance", "NATO", "G7", "BRICS", "UN", "central bank", "inflation", "recession", "GDP", "pandemic", "cybersecurity", "space", "Arctic", "Ukraine", "Taiwan", "Israel", "Gaza", "Korea", "Myanmar", "Sudan"],

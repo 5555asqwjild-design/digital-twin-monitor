@@ -276,7 +276,15 @@ class RSSScraper(BaseScraper):
     """通用 RSS 抓取器 - 用于 Economist/Al Jazeera/Rest of World/Foreign Affairs"""
     def scrape(self) -> List[Article]:
         try:
-            feed = feedparser.parse(self.source.url)
+            # 先用 requests 获取内容（支持反爬处理）
+            resp = self.session.get(self.source.url, timeout=30, allow_redirects=True)
+            resp.raise_for_status()
+            feed = feedparser.parse(resp.text)
+            
+            if not feed.entries:
+                print(f"[WARN] {self.source.name} RSS 返回 0 条 (status={resp.status_code}, url={resp.url})")
+                return []
+            
             articles = []
             for entry in feed.entries[:15]:
                 title = entry.title
@@ -292,9 +300,10 @@ class RSSScraper(BaseScraper):
                     published=published,
                     source=""
                 ))
+            print(f"[INFO] {self.source.name} RSS: {len(feed.entries)} 条, 匹配 {len(articles)} 条")
             return articles
         except Exception as e:
-            print(f"[ERROR] RSS解析失败 {self.source.name}: {e}")
+            print(f"[ERROR] RSS抓取失败 {self.source.name}: {e}")
             return []
 
 
