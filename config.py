@@ -36,7 +36,7 @@ SOURCES = [
         url="https://www.unrealengine.com/en-US/blog",
         type="html",
         priority=4,
-        keywords=["Pixel Streaming", "WebRTC", "large world coordinates", "rendering", "spatial computing", "nDisplay", "virtual production", "simulation", "digital twin"]
+        keywords=["Pixel Streaming", "WebRTC", "large world coordinates", "rendering", "spatial computing", "nDisplay", "virtual production", "simulation", "digital twin", "Unreal Engine 5", "Unreal Engine 6", "UE5", "UE6", "AI", "machine learning", "neural", "performance", "optimization", "world partition", "Nanite", "Lumen", "MetaHuman", "RealityScan", "Twinmotion", "Datasmith", "USD", "OpenUSD"]
     ),
     Source(
         name="NVIDIA Developer Blog",
