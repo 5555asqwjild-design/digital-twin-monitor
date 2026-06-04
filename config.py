@@ -36,7 +36,7 @@ SOURCES = [
         url="https://www.unrealengine.com/en-US/blog",
         type="html",
         priority=4,
-        keywords=["Pixel Streaming", "WebRTC", "large world coordinates", "rendering"]
+        keywords=["Pixel Streaming", "WebRTC", "large world coordinates", "rendering", "spatial computing", "nDisplay", "virtual production", "simulation", "digital twin"]
     ),
     Source(
         name="NVIDIA Developer Blog",

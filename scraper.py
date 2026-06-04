@@ -125,18 +125,21 @@ class OGCScraper(BaseScraper):
 
 
 class UnrealEngineScraper(BaseScraper):
-    """Unreal Engine Blog - 使用 RSS Feed"""
+    """Unreal Engine Blog - 使用 RSS Feed，带关键词过滤"""
     def scrape(self) -> List[Article]:
         feed_url = "https://www.unrealengine.com/rss"
         try:
             feed = feedparser.parse(feed_url)
             articles = []
-            for entry in feed.entries[:10]:
+            for entry in feed.entries[:15]:
+                # 清理标题中的HTML标签
+                title = re.sub(r'<[^>]+>', '', entry.title)
+                # 关键词过滤：只保留数字孪生/实时渲染相关
+                if not any(kw.lower() in title.lower() for kw in self.source.keywords):
+                    continue
                 published = None
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     published = datetime(*entry.published_parsed[:6])
-                # 清理标题中的HTML标签
-                title = re.sub(r'<[^>]+>', '', entry.title)
                 articles.append(Article(
                     title=title,
                     url=entry.link,
