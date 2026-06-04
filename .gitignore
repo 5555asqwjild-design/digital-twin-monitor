@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# 环境变量（绝不能上传）
+.env
+.env.local
+
+# 历史记录
+history.json
+
+# IDE
+.vscode/
+.idea/
