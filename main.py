@@ -102,15 +102,25 @@ def run_monitor(dry_run: bool = False):
 
     print(f"[INFO] 发现 {len(new_articles)} 条新文章")
 
-    # 4. AI 生成摘要（按分类分组）
+    # 4. AI 生成摘要 + 智能分类
     ai = AIProcessor()
     to_push = {"digital_twin": [], "global_affairs": []}
     for art in new_articles[:MAX_ARTICLES_PER_BATCH]:
         print(f"[INFO] 正在处理: {art.title[:60]}...")
         content = fetch_article_content(art.url)
         category = getattr(art, 'category', 'digital_twin')
+        
+        # AI 摘要
         summary = ai.summarize(art.title, content, category=category)
         art.summary = summary
+        
+        # AI 智能分类（仅数字孪生类）
+        if category == "digital_twin":
+            classify_result = ai.classify(art.title, content)
+            art.content_type = classify_result.get("content_type", "产业动态")
+            art.scene_tags = classify_result.get("scene_tags", [])
+            print(f"[INFO] 分类结果: {art.content_type} | 标签: {', '.join(art.scene_tags) if art.scene_tags else '无'}")
+        
         to_push.setdefault(category, []).append(art)
 
     # 5. 推送到飞书（按分类分别推送不同颜色的卡片）
@@ -121,27 +131,61 @@ def run_monitor(dry_run: bool = False):
         for category, arts in to_push.items():
             if not arts:
                 continue
-            push_data = [{
-                "title": a.title,
-                "summary": a.summary,
-                "url": a.url,
-                "source": a.source,
-            } for a in arts]
-
+            
             if category == "digital_twin":
-                title = f"🏗️ 数字孪生精选 ({date_str})"
+                # 数字孪生：按 content_type 分组推送
+                type_groups = {}
+                for a in arts:
+                    ctype = getattr(a, 'content_type', '产业动态')
+                    type_groups.setdefault(ctype, []).append(a)
+                
+                for ctype, type_arts in type_groups.items():
+                    push_data = [{
+                        "title": a.title,
+                        "summary": a.summary,
+                        "url": a.url,
+                        "source": a.source,
+                        "scene_tags": getattr(a, 'scene_tags', []),
+                    } for a in type_arts]
+                    
+                    type_icons = {
+                        "政策速递": "📋",
+                        "行业案例": "🏗️",
+                        "技术研报": "🔬",
+                        "产业动态": "📰",
+                    }
+                    icon = type_icons.get(ctype, "📰")
+                    title = f"{icon} {ctype} ({date_str})"
+                    
+                    if len(push_data) == 1:
+                        bot.send_single_article(
+                            push_data[0]["title"],
+                            push_data[0]["summary"],
+                            push_data[0]["url"],
+                            push_data[0]["source"],
+                            scene_tags=push_data[0].get("scene_tags", []),
+                        )
+                    else:
+                        bot.send_rich_text(title, push_data, category=category, content_type=ctype)
             else:
+                # 全球局势：保持原有逻辑
+                push_data = [{
+                    "title": a.title,
+                    "summary": a.summary,
+                    "url": a.url,
+                    "source": a.source,
+                } for a in arts]
                 title = f"🌍 全球格局速报 ({date_str})"
-
-            if len(push_data) == 1:
-                bot.send_single_article(
-                    push_data[0]["title"],
-                    push_data[0]["summary"],
-                    push_data[0]["url"],
-                    push_data[0]["source"],
-                )
-            else:
-                bot.send_rich_text(title, push_data, category=category)
+                
+                if len(push_data) == 1:
+                    bot.send_single_article(
+                        push_data[0]["title"],
+                        push_data[0]["summary"],
+                        push_data[0]["url"],
+                        push_data[0]["source"],
+                    )
+                else:
+                    bot.send_rich_text(title, push_data, category=category)
 
         # 6. 记录历史
         for arts in to_push.values():
@@ -152,8 +196,17 @@ def run_monitor(dry_run: bool = False):
     print(f"\n{'='*60}")
     print(f"✅ 完成: 推送 {total} 条文章")
     for cat, arts in to_push.items():
-        icon = "🏗️" if cat == "digital_twin" else "🌍"
-        print(f"  {icon} {cat}: {len(arts)} 条")
+        if cat == "digital_twin":
+            # 按子分类统计
+            type_counts = {}
+            for a in arts:
+                ctype = getattr(a, 'content_type', '产业动态')
+                type_counts[ctype] = type_counts.get(ctype, 0) + 1
+            print(f"  🏗️ 数字孪生: {len(arts)} 条")
+            for ctype, count in type_counts.items():
+                print(f"      • {ctype}: {count} 条")
+        else:
+            print(f"  🌍 {cat}: {len(arts)} 条")
     print(f"{'='*60}\n")
 
 

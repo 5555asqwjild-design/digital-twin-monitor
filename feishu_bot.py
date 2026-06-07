@@ -69,26 +69,41 @@ class FeishuBot:
             "content": {"text": text},
         })
 
-    def send_rich_text(self, title: str, articles: List[Dict], category: str = "digital_twin") -> bool:
+    def send_rich_text(self, title: str, articles: List[Dict], category: str = "digital_twin", content_type: str = "") -> bool:
         """
         发送富文本卡片 - 资讯列表
-        articles: [{"title": ..., "summary": ..., "url": ..., "source": ...}]
+        articles: [{"title": ..., "summary": ..., "url": ..., "source": ..., "scene_tags": [...]}]
         category: "digital_twin" 或 "global_affairs"，决定卡片颜色
+        content_type: 数字孪生子分类（政策速递/行业案例/技术研报/产业动态）
         """
         # 卡片颜色和图标
-        card_config = {
-            "digital_twin": {"icon": "🏗️", "template": "blue"},
-            "global_affairs": {"icon": "🌍", "template": "green"},
+        type_templates = {
+            "政策速递": "red",
+            "行业案例": "blue",
+            "技术研报": "purple",
+            "产业动态": "wathet",
         }
-        config = card_config.get(category, card_config["digital_twin"])
+        
+        if category == "global_affairs":
+            template = "green"
+        elif content_type and content_type in type_templates:
+            template = type_templates[content_type]
+        else:
+            template = "blue"
 
         elements = []
         for art in articles:
+            # 场景标签
+            tags = art.get("scene_tags", [])
+            tag_str = ""
+            if tags:
+                tag_str = " ".join([f"`{t}`" for t in tags]) + "\n"
+            
             elements.append({
                 "tag": "div",
                 "text": {
                     "tag": "lark_md",
-                    "content": f"**[{art['source']}]** [{art['title']}]({art['url']})\n📝 {art.get('summary', '')}",
+                    "content": f"**[{art['source']}]** [{art['title']}]({art['url']})\n{tag_str}📝 {art.get('summary', '')}",
                 }
             })
             elements.append({"tag": "hr"})
@@ -103,22 +118,23 @@ class FeishuBot:
                 "header": {
                     "title": {
                         "tag": "plain_text",
-                        "content": f"{config['icon']} {title}",
+                        "content": title,
                     },
-                    "template": config["template"],
+                    "template": template,
                 },
                 "elements": elements,
             },
         }
         return self._send(card)
 
-    def send_single_article(self, title: str, summary: str, url: str, source: str) -> bool:
+    def send_single_article(self, title: str, summary: str, url: str, source: str, scene_tags: List[str] = None) -> bool:
         """发送单条文章推送（实时触发用）"""
         return self.send_rich_text("数字孪生新资讯", [{
             "title": title,
             "summary": summary,
             "url": url,
             "source": source,
+            "scene_tags": scene_tags or [],
         }])
 
     def send_deep_dive(self, original_title: str, deep_content: str, url: str) -> bool:
@@ -161,18 +177,23 @@ class FeishuBot:
 
 if __name__ == "__main__":
     bot = FeishuBot()
-    # 测试推送
-    bot.send_rich_text("数字孪生每日精选", [
+    # 测试推送 - 国内分类示例
+    bot.send_rich_text("📋 政策速递 (06-07)", [
         {
-            "title": "Unreal Engine 5.4 Pixel Streaming重大更新",
-            "summary": "WebRTC延迟降低30%，新增IoT数据流直接接入API",
+            "title": "工信部发布《数字孪生工厂建设指南》",
+            "summary": "到2027年打造100个数字孪生工厂标杆，优先采用国产GIS平台和渲染引擎",
             "url": "https://example.com",
-            "source": "Unreal Engine Blog",
+            "source": "工信部",
+            "scene_tags": ["工业互联网", "信创国产化"],
         },
+    ], category="digital_twin", content_type="政策速递")
+    
+    bot.send_rich_text("🏗️ 行业案例 (06-07)", [
         {
-            "title": "OGC发布3D Tiles 1.1正式标准",
-            "summary": "支持语义元数据和隐式瓦片，大幅提升城市场景加载效率",
+            "title": "深圳市CIM平台二期建成，覆盖全市2000+建筑",
+            "summary": "基于超图GIS引擎，实现城市级数字孪生底座，支撑智慧城管、应急指挥等场景",
             "url": "https://example.com",
-            "source": "OGC",
+            "source": "泰伯网",
+            "scene_tags": ["智慧城市", "实景三维"],
         },
-    ])
+    ], category="digital_twin", content_type="行业案例")

@@ -72,8 +72,77 @@ class AIProcessor:
 摘要："""
 
         result = self._call(prompt, system_prompt=system, max_tokens=200)
-        result = result.replace("摘要：", "").strip()
+        result = result.replace("摘要：", "").replace("格局解读：", "").strip()
         return result if result else f"{title[:50]}..."
+
+    def classify(self, title: str, content: str) -> dict:
+        """
+        对数字孪生文章进行智能分类
+        返回 {"content_type": "政策速递|行业案例|技术研报|产业动态", "scene_tags": ["智慧城市", "智慧水利", ...]}
+        """
+        content = content[:2000] if content else ""
+        system = "你是一位中国数字孪生产业分类专家，熟悉国内政策、技术和应用场景。只输出JSON格式，不要任何解释。"
+        prompt = f"""请对以下数字孪生相关文章进行分类，只输出JSON，不要任何其他文字。
+
+分类规则：
+1. content_type（内容类型，单选）：
+   - "政策速递" — 政府发布的政策、规划、指导意见、通知、标准
+   - "行业案例" — 具体项目的实施、落地、应用案例、试点经验
+   - "技术研报" — 技术白皮书、研究报告、技术路线分析、测评
+   - "产业动态" — 企业新闻、市场动态、投融资、行业活动
+
+2. scene_tags（应用场景标签，可多选，最多3个）：
+   ["智慧城市", "智慧水利", "智慧电力", "智慧交通", "智慧园区", "实景三维", "工业互联网", "信创国产化"]
+   如果都不匹配则留空数组 []
+
+标题：{title}
+内容：{content}
+
+请严格按以下JSON格式输出（不要markdown代码块）：
+{{"content_type":"...","scene_tags":["..."]}}
+"""
+        result = self._call(prompt, system_prompt=system, max_tokens=150)
+        try:
+            import json
+            # 清理可能的 markdown 代码块
+            result = result.strip()
+            if result.startswith("```"):
+                result = result.split("\n", 1)[1]
+            if result.endswith("```"):
+                result = result.rsplit("\n", 1)[0]
+            result = result.strip()
+            data = json.loads(result)
+            return {
+                "content_type": data.get("content_type", "产业动态"),
+                "scene_tags": data.get("scene_tags", [])
+            }
+        except Exception:
+            # 回退：根据关键词简单分类
+            text = (title + " " + content).lower()
+            if any(k in text for k in ["政策", "通知", "意见", "规划", "标准", "指南", "印发", "发布"]):
+                ctype = "政策速递"
+            elif any(k in text for k in ["案例", "落地", "实施", "项目", "试点", "应用", "建设", "交付"]):
+                ctype = "行业案例"
+            elif any(k in text for k in ["白皮书", "报告", "研究", "测评", "分析", "技术路线"]):
+                ctype = "技术研报"
+            else:
+                ctype = "产业动态"
+            
+            tags = []
+            tag_keywords = {
+                "智慧城市": ["城市", "cim", "市政"],
+                "智慧水利": ["水利", "水务", "防洪", "流域"],
+                "智慧电力": ["电力", "电网", "能源", "电厂"],
+                "智慧交通": ["交通", "公路", "铁路", "地铁", "机场"],
+                "智慧园区": ["园区", "开发区", "厂区"],
+                "实景三维": ["实景三维", "测绘", "遥感", "地理信息"],
+                "工业互联网": ["工业", "制造", "工厂", "车间"],
+                "信创国产化": ["信创", "国产化", "国产", "自主可控"]
+            }
+            for tag, kws in tag_keywords.items():
+                if any(k in text for k in kws):
+                    tags.append(tag)
+            return {"content_type": ctype, "scene_tags": tags[:3]}
 
     def deep_dive(self, title: str, content: str, focus_area: str = "", category: str = "digital_twin") -> str:
         """

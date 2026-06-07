@@ -22,7 +22,8 @@ from config import SOURCES, MAX_ARTICLES_PER_BATCH
 class Article:
     """标准化文章结构"""
     def __init__(self, title: str, url: str, source: str, published: Optional[datetime] = None,
-                 summary: str = "", content: str = "", author: str = "", category: str = "digital_twin"):
+                 summary: str = "", content: str = "", author: str = "", category: str = "digital_twin",
+                 content_type: str = "", scene_tags: Optional[List[str]] = None):
         self.title = title
         self.url = url
         self.source = source
@@ -31,6 +32,8 @@ class Article:
         self.content = content
         self.author = author
         self.category = category
+        self.content_type = content_type or "产业动态"  # 政策速递/行业案例/技术研报/产业动态
+        self.scene_tags = scene_tags or []  # 应用场景标签
         self.id = hashlib.md5(f"{title}:{url}".encode()).hexdigest()
 
     def to_dict(self) -> Dict:
@@ -43,10 +46,12 @@ class Article:
             "summary": self.summary,
             "author": self.author,
             "category": self.category,
+            "content_type": self.content_type,
+            "scene_tags": self.scene_tags,
         }
 
     def __repr__(self):
-        return f"<Article [{self.category}] {self.source}: {self.title[:50]}...>"
+        return f"<Article [{self.category}/{self.content_type}] {self.source}: {self.title[:50]}...>"
 
 
 class BaseScraper:
