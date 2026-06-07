@@ -58,12 +58,13 @@ class AIProcessor:
 
 格局解读："""
         else:
-            system = "你是一位数字孪生行业技术专家，擅长从英文技术文章中提取核心干货。输出简洁、结构化、无废话。"
-            prompt = f"""请对以下数字孪生行业技术文章生成一句精简的中文摘要（不超过{SUMMARY_MAX_LENGTH}字）。
+            system = "你是一位中国数字孪生产业分析师，熟悉国内政策、技术路线和行业落地。输出简洁、有洞察力。"
+            prompt = f"""请对以下国内数字孪生相关内容生成一句精简的中文摘要（不超过{SUMMARY_MAX_LENGTH}字）。
 要求：
-- 只说核心技术点/更新内容，不要背景介绍
-- 如果涉及具体技术（如Pixel Streaming、3D Tiles、OpenUSD等），点明名称
-- 格式：【技术点】+ 【价值/影响】
+- 点明政策/技术/案例的核心要点
+- 说明对国内产业的影响或落地价值
+- 如涉及具体企业（超图、51World、飞渡等）或政策文件，点明名称
+- 格式：【要点】+ 【影响/价值】
 
 标题：{title}
 内容：{content}
@@ -108,26 +109,35 @@ class AIProcessor:
 {content}
 """
         else:
-            system = "你是一位数字孪生领域的技术专家。"
-            prompt = f"""你是一位数字孪生领域的技术专家。请对以下技术文章进行"爆破式"解读，提取所有硬核干货，删除一切废话。
+            system = "你是一位中国数字孪生产业分析师，熟悉国内政策环境、国产化技术路线和行业落地案例。"
+            prompt = f"""你是一位中国数字孪生产业分析师。请对以下内容进行深度解读，聚焦国内政策、国产化技术路线和行业落地价值。
 
 {focus_hint}
 
 要求输出格式（严格按此格式）：
-## 📌 核心结论
-（一句话总结这篇文章最重要的1-3个结论）
+## 📌 核心要点
+（一句话总结政策/案例/技术的核心内容，如涉及具体文件请写明文件名）
 
-## 🔧 技术干货
-- 要点1：...
-- 要点2：...
-- 要点3：...
-（列出所有具体的技术方案、参数、架构设计、性能数据）
+## 🏛️ 政策/产业背景
+- 相关政策：...
+- 主管部门：...
+- 产业阶段：...
+（如涉及政策，说明发文单位、政策层级、与前期政策的衔接关系）
 
-## 💡 对你的价值
-（结合GIS+Unreal背景，说明这篇文章对你实际工作的直接帮助）
+## 🔧 技术/国产化要点
+- 技术方案：...
+- 国产化元素：...
+- 信创要求：...
+（如涉及技术，说明国产GIS引擎/渲染引擎/数据库等，以及与国外技术的替代关系）
 
-## 🔗 关键术语/链接
-（文章中提到的技术标准、工具、协议名称）
+## 💼 落地价值
+- 应用场景：...
+- 受益方：...
+- 商业模式：...
+（说明智慧城市/智慧园区/水利/电力/交通等具体落地场景和可复制性）
+
+## 📈 产业影响
+（对国内数字孪生产业链的影响，对相关企业的机会或挑战）
 
 原文标题：{title}
 原文内容：
@@ -139,9 +149,9 @@ class AIProcessor:
 if __name__ == "__main__":
     # 测试
     processor = AIProcessor()
-    test_title = "Unreal Engine 5.4 Pixel Streaming Updates"
-    test_content = "The latest update to Pixel Streaming in UE 5.4 introduces significant improvements to WebRTC protocol handling, reducing latency by 30% for multi-user scenarios. New APIs allow direct integration with IoT data streams..."
+    test_title = "工信部发布《数字孪生工厂建设指南》"
+    test_content = "工信部近日印发《数字孪生工厂建设指南》，提出到2027年在航空航天、汽车制造、能源电力等重点行业打造100个数字孪生工厂标杆。指南明确要求优先采用国产工业软件、国产GIS平台和国产渲染引擎，符合信创要求。超图软件、51World、飞渡科技等企业已参与标准制定。"
     print("=== 摘要测试 ===")
     print(processor.summarize(test_title, test_content))
-    print("\n=== 深度爆破测试 ===")
-    print(processor.deep_dive(test_title, test_content, "渲染架构"))
+    print("\n=== 深度解读测试 ===")
+    print(processor.deep_dive(test_title, test_content, "政策解读"))

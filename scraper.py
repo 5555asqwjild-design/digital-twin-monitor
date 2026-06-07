@@ -87,135 +87,97 @@ class BaseScraper:
 # 数字孪生数据源抓取器
 # ============================================================
 
-class DigitalTwinConsortiumScraper(BaseScraper):
-    """Digital Twin Consortium Blog"""
-    def parse(self, html: str) -> List[Article]:
-        soup = BeautifulSoup(html, "html.parser")
-        articles = []
-        for item in soup.select(".entry")[:10]:
-            link = item.find("a", href=True)
-            if not link:
-                continue
-            title = link.get_text(strip=True)
-            url = link["href"]
-            if not url.startswith("http"):
-                url = urljoin(self.source.url, url)
-            date_match = re.search(r'/(\d{4})/(\d{2})/', url)
-            published = None
-            if date_match:
-                try:
-                    published = datetime(int(date_match.group(1)), int(date_match.group(2)), 1)
-                except:
-                    pass
-            articles.append(Article(title=title, url=url, published=published, source=""))
-        return articles
+# ============================================================
+# 国内数字孪生数据源抓取器
+# ============================================================
 
-
-class OGCScraper(BaseScraper):
-    """OGC Blog"""
-    def parse(self, html: str) -> List[Article]:
-        soup = BeautifulSoup(html, "html.parser")
-        articles = []
-        for item in soup.select(".e-loop-item")[:10]:
-            link = item.find("a", href=True)
-            if not link:
-                continue
-            title = link.get_text(strip=True)
-            url = link["href"]
-            if not url.startswith("http"):
-                url = urljoin(self.source.url, url)
-            articles.append(Article(title=title, url=url, source=""))
-        return articles
-
-
-class UnrealEngineScraper(BaseScraper):
-    """Unreal Engine Blog - 使用 RSS Feed，带关键词过滤"""
-    def scrape(self) -> List[Article]:
-        feed_url = "https://www.unrealengine.com/rss"
-        try:
-            feed = feedparser.parse(feed_url)
-            articles = []
-            for entry in feed.entries[:15]:
-                title = re.sub(r'<[^>]+>', '', entry.title)
-                if not any(kw.lower() in title.lower() for kw in self.source.keywords):
-                    continue
-                published = None
-                if hasattr(entry, 'published_parsed') and entry.published_parsed:
-                    published = datetime(*entry.published_parsed[:6])
-                articles.append(Article(
-                    title=title, url=entry.link, published=published, source=""
-                ))
-            return articles
-        except Exception as e:
-            print(f"[ERROR] UE RSS解析失败: {e}")
-            return []
-
-
-class NVIDIAScraper(BaseScraper):
-    """NVIDIA Developer Blog"""
+class TaiboScraper(BaseScraper):
+    """泰伯网 - 国内GIS/数字孪生行业媒体"""
     def parse(self, html: str) -> List[Article]:
         soup = BeautifulSoup(html, "html.parser")
         articles = []
         seen = set()
-        for item in soup.select(".js-post-card")[:60]:
-            link = item.find("a", href=True)
-            if not link:
-                continue
-            title = link.get_text(strip=True)
-            url = link["href"]
-            if url in seen:
-                continue
-            seen.add(url)
-            if not any(kw.lower() in title.lower() for kw in self.source.keywords):
-                continue
-            articles.append(Article(title=title, url=url, source=""))
-        return articles
-
-
-class CesiumScraper(BaseScraper):
-    """Cesium Blog"""
-    def parse(self, html: str) -> List[Article]:
-        soup = BeautifulSoup(html, "html.parser")
-        articles = []
-        seen = set()
+        # 泰伯网文章链接模式: /p/{id} 或 /newsflashes/{id}
         for link in soup.find_all("a", href=True):
             href = link["href"]
-            if not re.search(r'/blog/\d{4}/\d{2}/\d{2}/', href):
+            if not re.search(r'/(p|newsflashes)/\d+', href):
                 continue
             title = link.get_text(strip=True)
-            if not title or len(title) < 10:
+            if not title or len(title) < 5:
                 continue
-            url = href if href.startswith("http") else urljoin("https://cesium.com", href)
+            url = href if href.startswith("http") else urljoin("https://www.taibo.cn", href)
             if url in seen:
                 continue
             seen.add(url)
+            # 关键词过滤
+            if not any(kw in title for kw in self.source.keywords):
+                continue
             articles.append(Article(title=title, url=url, source=""))
             if len(articles) >= 10:
                 break
         return articles
 
 
-class HackerNewsScraper(BaseScraper):
-    """Hacker News - 通过 Algolia API"""
-    def scrape(self) -> List[Article]:
-        search_terms = ["digital twin", "3D Tiles", "WebRTC", "Cesium"]
+class GovScraper(BaseScraper):
+    """政府网站通用抓取器 - 工信部/住建部/自然资源部"""
+    def parse(self, html: str) -> List[Article]:
+        soup = BeautifulSoup(html, "html.parser")
         articles = []
-        for term in search_terms:
-            try:
-                url = f"https://hn.algolia.com/api/v1/search_by_date?query={term}&tags=story&hitsPerPage=5"
-                resp = self.session.get(url, timeout=30)
-                data = resp.json()
-                for hit in data.get("hits", []):
-                    title = hit.get("title", "")
-                    story_url = hit.get("url") or f"https://news.ycombinator.com/item?id={hit.get('objectID')}"
-                    created_at = datetime.fromtimestamp(hit.get("created_at_i", 0))
-                    if datetime.now() - created_at > timedelta(days=7):
-                        continue
-                    articles.append(Article(
-                        title=title, url=story_url, published=created_at, source=""
-                    ))
-            except Exception as e:
-                print(f"[ERROR] HN搜索失败 {term}: {e}")
+        seen = set()
+        # 政府网站常见列表结构
+        selectors = [
+            ".news_list li", ".list li", ".TRS_Editor a", 
+".news-item", ".item", "table a", ".gl-list li"
+        ]
+        items = []
+        for sel in selectors:
+            items = soup.select(sel)
+            if items:
+                break
+        
+        for item in items[:15]:
+            link = item.find("a", href=True) if hasattr(item, 'find') else item
+            if not link or not link.get("href"):
+                continue
+            title = link.get_text(strip=True)
+            if not title or len(title) < 5:
+                continue
+            href = link["href"]
+            url = href if href.startswith("http") else urljoin(self.source.url, href)
+            if url in seen:
+                continue
+            seen.add(url)
+            # 关键词过滤
+            if not any(kw in title for kw in self.source.keywords):
+                continue
+            articles.append(Article(title=title, url=url, source=""))
+        return articles
+
+
+class CAICTScraper(BaseScraper):
+    """中国信通院 - 研究报告"""
+    def parse(self, html: str) -> List[Article]:
+        soup = BeautifulSoup(html, "html.parser")
+        articles = []
+        seen = set()
+        # 信通院报告列表
+        for link in soup.find_all("a", href=True):
+            href = link["href"]
+            # 过滤PDF链接和报告详情页
+            if not (".pdf" in href or "/kxyj/" in href or "/qwfb/" in href):
+                continue
+            title = link.get_text(strip=True)
+            if not title or len(title) < 5:
+                continue
+            url = href if href.startswith("http") else urljoin("http://www.caict.ac.cn", href)
+            if url in seen:
+                continue
+            seen.add(url)
+            if not any(kw in title for kw in self.source.keywords):
+                continue
+            articles.append(Article(title=title, url=url, source=""))
+            if len(articles) >= 8:
+                break
         return articles
 
 
@@ -312,13 +274,12 @@ class RSSScraper(BaseScraper):
 # ============================================================
 
 SCRAPER_MAP = {
-    # 数字孪生
-    "Digital Twin Consortium": DigitalTwinConsortiumScraper,
-    "OGC Standards": OGCScraper,
-    "Unreal Engine Blog": UnrealEngineScraper,
-    "NVIDIA Developer Blog": NVIDIAScraper,
-    "Cesium Blog": CesiumScraper,
-    "Hacker News": HackerNewsScraper,
+    # 国内数字孪生
+    "泰伯网": TaiboScraper,
+    "工信部": GovScraper,
+    "住建部": GovScraper,
+    "自然资源部": GovScraper,
+    "中国信通院": CAICTScraper,
     # 全球局势
     "The Economist": RSSScraper,
     "Wikipedia Current Events": WikipediaScraper,

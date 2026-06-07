@@ -16,54 +16,46 @@ class Source:
     category: str = "digital_twin"  # "digital_twin" 或 "global_affairs"
 
 
-# === 数字孪生数据源 ===
+# === 数字孪生数据源（国内导向）===
 DIGITAL_TWIN_SOURCES = [
     Source(
-        name="Digital Twin Consortium",
-        url="https://www.digitaltwinconsortium.org/blog/",
+        name="泰伯网",
+        url="https://www.taibo.cn/",
         type="html",
         priority=5,
-        keywords=["digital twin", "interoperability", "white paper", "lifecycle"],
+        keywords=["数字孪生", "实景三维", "CIM", "城市信息模型", "GIS", "三维GIS", "空间智能", "智慧城市", "智慧园区", "智慧水利", "智慧交通", "智慧电力", "低空经济", "遥感", "测绘", "超图", "51World", "飞渡", "优锘", "信创", "国产化"],
         category="digital_twin",
     ),
     Source(
-        name="OGC Standards",
-        url="https://www.ogc.org/blog",
+        name="工信部",
+        url="https://www.miit.gov.cn/jgsj/xxjsfzs/wjfb/index.html",
         type="html",
         priority=5,
-        keywords=["3D Tiles", "CityGML", "geospatial", "standard"],
+        keywords=["数字孪生", "工业互联网", "智能制造", "数字化转型", "实景三维", "CIM", "智慧城市", "信创", "国产化", "工业软件"],
         category="digital_twin",
     ),
     Source(
-        name="Unreal Engine Blog",
-        url="https://www.unrealengine.com/en-US/blog",
+        name="住建部",
+        url="https://www.mohurd.gov.cn/gongkai/zc/wjk/index.html",
+        type="html",
+        priority=5,
+        keywords=["数字孪生", "CIM", "城市信息模型", "智慧城市", "数字住建", "实景三维", "市政基础设施", "城市运行管理"],
+        category="digital_twin",
+    ),
+    Source(
+        name="自然资源部",
+        url="https://gi.mnr.gov.cn/",
         type="html",
         priority=4,
-        keywords=["Pixel Streaming", "WebRTC", "large world coordinates", "rendering", "spatial computing", "nDisplay", "virtual production", "simulation", "digital twin", "Unreal Engine 5", "Unreal Engine 6", "UE5", "UE6", "AI", "machine learning", "neural", "performance", "optimization", "world partition", "Nanite", "Lumen", "MetaHuman", "RealityScan", "Twinmotion", "Datasmith", "USD", "OpenUSD"],
+        keywords=["实景三维", "数字孪生", "三维GIS", "测绘", "遥感", "国土空间", "地理信息", "基础测绘", "时空大数据"],
         category="digital_twin",
     ),
     Source(
-        name="NVIDIA Developer Blog",
-        url="https://developer.nvidia.com/blog",
+        name="中国信通院",
+        url="http://www.caict.ac.cn/kxyj/qwfb/ztbg/",
         type="html",
         priority=4,
-        keywords=["digital twin", "Omniverse", "OpenUSD", "IoT", "WebSocket", "simulation", "physics", "USD"],
-        category="digital_twin",
-    ),
-    Source(
-        name="Cesium Blog",
-        url="https://cesium.com/blog/",
-        type="html",
-        priority=4,
-        keywords=["Cesium for Unreal", "3D Tiles", "streaming", "terrain"],
-        category="digital_twin",
-    ),
-    Source(
-        name="Hacker News",
-        url="https://hn.algolia.com/?q=digital+twin",
-        type="api",
-        priority=3,
-        keywords=["digital twin", "3D Tiles", "WebRTC", "signaling server"],
+        keywords=["数字孪生", "数字孪生城市", "智慧城市", "CIM", "实景三维", "数字化转型", "工业互联网", "产业图谱"],
         category="digital_twin",
     ),
 ]
