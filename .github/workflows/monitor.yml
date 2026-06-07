@@ -2,8 +2,8 @@ name: 数字孪生资讯监控
 
 on:
   schedule:
-    # 每12小时运行一次 (UTC)
-    - cron: '0 */12 * * *'
+    # 每24小时运行一次 (UTC 00:00)
+    - cron: '0 0 * * *'
   workflow_dispatch:  # 支持手动触发
 
 jobs:
