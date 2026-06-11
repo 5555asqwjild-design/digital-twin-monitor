@@ -87,14 +87,24 @@ def run_monitor(dry_run: bool = False):
         print("[WARN] 未抓取到任何文章")
         return
 
-    # 3. 过滤新文章 + 时间过滤（只取最近3天）
+    # 3. 过滤新文章 + 时间过滤（只取最近3天）+ 标题去重
     cutoff = datetime.now() - timedelta(days=3)
     new_articles = []
+    seen_titles = set()
     for art in articles:
-        if history.is_new(art.id):
-            if art.published and art.published < cutoff:
-                continue
-            new_articles.append(art)
+        # 标题去重（即使URL不同，标题相同也跳过）
+        title_key = art.title.strip()[:50]
+        if title_key in seen_titles:
+            print(f"[INFO] 标题重复跳过: {art.title[:50]}")
+            continue
+        seen_titles.add(title_key)
+        
+        if not history.is_new(art.id):
+            print(f"[INFO] 已推送跳过: {art.title[:50]}")
+            continue
+        if art.published and art.published < cutoff:
+            continue
+        new_articles.append(art)
 
     if not new_articles:
         print("[INFO] 没有新文章需要推送")
